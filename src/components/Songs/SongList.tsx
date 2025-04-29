@@ -1,20 +1,47 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../store';
-import { fetchSongs, searchSongs } from '../../store/slices/songsSlice';
+import { fetchSongs, searchSongs, searchSpotifySongs } from '../../store/slices/songsSlice';
 import './SongList.css';
+
+// Debounce helper function
+function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: Parameters<F>): void => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => func(...args), waitFor);
+  };
+}
 
 const SongList = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { songs, filteredSongs, status, error } = useSelector((state: RootState) => state.songs);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   
   useEffect(() => {
     if (status === 'idle') {
       dispatch(fetchSongs());
     }
   }, [status, dispatch]);
+  
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      if (query.trim()) {
+        dispatch(searchSpotifySongs(query));
+      } else {
+        dispatch(searchSongs(''));
+      }
+      setIsSearching(false);
+    }, 500), // 500ms delay
+    [dispatch]
+  );
   
   const handleSongSelect = (songId: string) => {
     navigate(`/player/${songId}`);
@@ -49,8 +76,25 @@ const SongList = () => {
           type="text"
           placeholder="Search for the BEST songs..."
           className="vaporwave-input w-full max-w-md"
-          onChange={(e) => dispatch(searchSongs(e.target.value))}
+          value={searchQuery}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSearchQuery(value);
+            setIsSearching(true);
+            debouncedSearch(value);
+          }}
         />
+        <div className="search-info mt-2 text-sm">
+          {searchQuery.trim() && isSearching && (
+            <span className="neon-text">Typing...</span>
+          )}
+          {searchQuery.trim() && status === 'loading' && !isSearching && (
+            <span className="neon-text">Searching Spotify for "{searchQuery}"...</span>
+          )}
+          {searchQuery.trim() && status === 'succeeded' && filteredSongs.length > 0 && (
+            <span className="neon-text">Showing Spotify results for "{searchQuery}"</span>
+          )}
+        </div>
       </div>
       
       <div className="songs-grid">

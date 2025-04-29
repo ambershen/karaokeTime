@@ -48,6 +48,27 @@
   text-shadow: 0 0 3px #00F5FF;
 }
 
+/* Typeahead search styling */
+.search-info {
+  min-height: 1.5rem;
+}
+
+.search-info .neon-text {
+  display: inline-block;
+  animation: pulse 1.5s infinite alternate;
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.7;
+    text-shadow: 0 0 4px #FF6EC7, 0 0 8px #00F5FF;
+  }
+  to {
+    opacity: 1;
+    text-shadow: 0 0 8px #FF6EC7, 0 0 16px #00F5FF;
+  }
+}
+
 .loading-container {
   display: flex;
   flex-direction: column;

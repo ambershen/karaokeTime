@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { searchSpotifyTracks } from '../../services/spotifyService';
 
 interface Song {
   id: string;
@@ -26,7 +27,7 @@ const initialState: SongsState = {
   error: null,
 };
 
-// Example async thunk for fetching songs
+// Async thunk for fetching initial songs
 export const fetchSongs = createAsyncThunk('songs/fetchSongs', async () => {
   // In a real app, this would be an API call
   return [
@@ -59,6 +60,15 @@ export const fetchSongs = createAsyncThunk('songs/fetchSongs', async () => {
   ];
 });
 
+// Async thunk for searching songs via Spotify API
+export const searchSpotifySongs = createAsyncThunk(
+  'songs/searchSpotifySongs',
+  async (query: string) => {
+    if (!query.trim()) return [];
+    return await searchSpotifyTracks(query);
+  }
+);
+
 const songsSlice = createSlice({
   name: 'songs',
   initialState,
@@ -68,6 +78,10 @@ const songsSlice = createSlice({
     },
     searchSongs: (state, action: PayloadAction<string>) => {
       const searchTerm = action.payload.toLowerCase();
+      if (!searchTerm) {
+        state.filteredSongs = state.songs;
+        return;
+      }
       state.filteredSongs = state.songs.filter(
         (song) =>
           song.title.toLowerCase().includes(searchTerm) ||
@@ -80,6 +94,7 @@ const songsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Handle fetchSongs
       .addCase(fetchSongs.pending, (state) => {
         state.status = 'loading';
       })
@@ -91,6 +106,19 @@ const songsSlice = createSlice({
       .addCase(fetchSongs.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.error.message || 'Failed to fetch songs';
+      })
+      
+      // Handle searchSpotifySongs
+      .addCase(searchSpotifySongs.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(searchSpotifySongs.fulfilled, (state, action: PayloadAction<Song[]>) => {
+        state.status = 'succeeded';
+        state.filteredSongs = action.payload;
+      })
+      .addCase(searchSpotifySongs.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.error.message || 'Failed to search Spotify songs';
       });
   },
 });
